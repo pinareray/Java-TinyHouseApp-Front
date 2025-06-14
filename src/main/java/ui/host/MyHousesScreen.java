@@ -167,9 +167,9 @@ public class MyHousesScreen extends JFrame {
                 .thenAccept(result -> {
                     if (result.isSuccess()) {
                         SwingUtilities.invokeLater(() -> {
-                            // Tüm alanları içeren sütun başlıkları
                             String[] columns = {
-                                    "ID", "Başlık", "Açıklama", "Fiyat", "Konum", "Durum", "Başlangıç", "Bitiş"
+                                    "ID", "Başlık", "Açıklama", "Fiyat", "Konum", "Durum",
+                                    "Başlangıç", "Bitiş", "Yorum Sayısı", "Puan Ortalaması"
                             };
                             DefaultTableModel model = new DefaultTableModel(columns, 0);
 
@@ -182,7 +182,9 @@ public class MyHousesScreen extends JFrame {
                                         house.getLocation(),
                                         house.getStatus(),
                                         house.getAvailableFrom() != null ? house.getAvailableFrom().toString() : "-",
-                                        house.getAvailableTo() != null ? house.getAvailableTo().toString() : "-"
+                                        house.getAvailableTo() != null ? house.getAvailableTo().toString() : "-",
+                                        house.getCommentCount(),
+                                        house.getAverageRating()
                                 };
                                 model.addRow(row);
                             }
@@ -198,4 +200,5 @@ public class MyHousesScreen extends JFrame {
                     return null;
                 });
     }
+
 }

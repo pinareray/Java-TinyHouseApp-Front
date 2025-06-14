@@ -1,17 +1,32 @@
 package ui.admin;
 
+import business.services.adminService.AdminService;
+import business.services.adminService.IAdminService;
+import core.utilities.results.DataResult;
+import entites.dtos.AdminSummaryDto;
+
 import javax.swing.*;
 import java.awt.*;
 
 public class AdminSummaryScreen extends JFrame {
 
+    private final IAdminService adminService = new AdminService();
+
+    private JLabel userLabel;
+    private JLabel hostLabel;
+    private JLabel renterLabel;
+    private JLabel activeReservationsLabel;
+    private JLabel monthlyReservationsLabel;  // Yeni satır
+    private JLabel incomeLabel;
+
     public AdminSummaryScreen() {
         setTitle("Sistem Özeti - Admin Dashboard");
-        setSize(600, 400);
+        setSize(600, 450);
         setLocationRelativeTo(null);
         setResizable(false);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         initUI();
+        loadSummary();
     }
 
     private void initUI() {
@@ -24,28 +39,32 @@ public class AdminSummaryScreen extends JFrame {
         title.setBounds(180, 20, 300, 30);
         panel.add(title);
 
-        JLabel userLabel = new JLabel("👤 Toplam Kullanıcı: 120");
-        userLabel.setBounds(50, 80, 200, 25);
+        userLabel = new JLabel("👤 Toplam Kullanıcı: ...");
+        userLabel.setBounds(50, 80, 300, 25);
         panel.add(userLabel);
 
-        JLabel hostLabel = new JLabel("🏡 Ev Sahibi Sayısı: 45");
-        hostLabel.setBounds(50, 110, 200, 25);
+        hostLabel = new JLabel("🏡 Ev Sahibi Sayısı: ...");
+        hostLabel.setBounds(50, 120, 300, 25);
         panel.add(hostLabel);
 
-        JLabel renterLabel = new JLabel("🧍 Kiracı Sayısı: 75");
-        renterLabel.setBounds(50, 140, 200, 25);
+        renterLabel = new JLabel("🧍 Kiracı Sayısı: ...");
+        renterLabel.setBounds(50, 160, 300, 25);
         panel.add(renterLabel);
 
-        JLabel activeReservations = new JLabel("📅 Aktif Rezervasyonlar: 32");
-        activeReservations.setBounds(50, 170, 250, 25);
-        panel.add(activeReservations);
+        activeReservationsLabel = new JLabel("📅 Aktif Rezervasyonlar: ...");
+        activeReservationsLabel.setBounds(50, 200, 300, 25);
+        panel.add(activeReservationsLabel);
 
-        JLabel incomeLabel = new JLabel("💰 Aylık Toplam Gelir: 48.500₺");
-        incomeLabel.setBounds(50, 200, 250, 25);
+        monthlyReservationsLabel = new JLabel("📊 Aylık Rezervasyon Sayısı: ...");
+        monthlyReservationsLabel.setBounds(50, 240, 300, 25);
+        panel.add(monthlyReservationsLabel);
+
+        incomeLabel = new JLabel("💰 Aylık Toplam Gelir: ...");
+        incomeLabel.setBounds(50, 280, 300, 25);
         panel.add(incomeLabel);
 
         JButton backButton = new JButton("← Admin Paneline Dön");
-        backButton.setBounds(20, 310, 180, 30);
+        backButton.setBounds(20, 360, 180, 30);
         panel.add(backButton);
 
         backButton.addActionListener(e -> {
@@ -53,5 +72,31 @@ public class AdminSummaryScreen extends JFrame {
             new AdminDashboard().setVisible(true);
         });
     }
-}
 
+    private void loadSummary() {
+        adminService.getSystemSummary().thenAccept(result -> {
+            if (result.isSuccess()) {
+                AdminSummaryDto summary = result.getData();
+
+                SwingUtilities.invokeLater(() -> {
+                    userLabel.setText("👤 Toplam Kullanıcı: " + summary.getTotalUsers());
+                    hostLabel.setText("🏡 Ev Sahibi Sayısı: " + summary.getTotalHosts());
+                    renterLabel.setText("🧍 Kiracı Sayısı: " + summary.getTotalRenters());
+                    activeReservationsLabel.setText("📅 Aktif Rezervasyonlar: " + summary.getActiveReservations());
+                    monthlyReservationsLabel.setText("📊 Aylık Rezervasyon Sayısı: " + summary.getMonthlyReservations());
+                    incomeLabel.setText("💰 Aylık Toplam Gelir: " + String.format("%.2f₺", summary.getMonthlyIncome()));
+                });
+            } else {
+                SwingUtilities.invokeLater(() ->
+                        JOptionPane.showMessageDialog(null, "Özet veriler yüklenemedi: " + result.getMessage())
+                );
+            }
+        }).exceptionally(ex -> {
+            ex.printStackTrace();
+            SwingUtilities.invokeLater(() ->
+                    JOptionPane.showMessageDialog(null, "Sunucu hatası: " + ex.getMessage())
+            );
+            return null;
+        });
+    }
+}

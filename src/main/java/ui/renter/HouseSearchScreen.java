@@ -1,11 +1,15 @@
 package ui.renter;
 
-import ui.renter.RenterDashboard;
+import business.services.houseService.HouseService;
+import business.services.houseService.IHouseService;
+import core.session.UserSession;
+import entites.dtos.HouseListDto;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.util.List;
 
 public class HouseSearchScreen extends JFrame {
     private JTable houseTable;
@@ -19,6 +23,7 @@ public class HouseSearchScreen extends JFrame {
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 
         initUI();
+        loadHouseData();
     }
 
     private void initUI() {
@@ -29,16 +34,9 @@ public class HouseSearchScreen extends JFrame {
         titleLabel.setFont(new Font("Arial", Font.BOLD, 20));
         panel.add(titleLabel, BorderLayout.NORTH);
 
-        // Sahte veri (ileride veritabanı bağlayacağız)
-        String[] columns = {"İlan ID", "Başlık", "Fiyat", "Konum", "Puan"};
-        Object[][] data = {
-                {1, "Orman Evi", 600.0, "Sapanca", 4.5},
-                {2, "Deniz Bungalovu", 750.0, "Bodrum", 4.8},
-                {3, "Dağ Evi", 550.0, "Uludağ", 4.2},
-                {4, "Göl Kenarı Tiny House", 800.0, "Abant", 5.0}
-        };
-
-        DefaultTableModel model = new DefaultTableModel(data, columns);
+        // Yeni sütun başlıkları eklendi
+        String[] columns = {"İlan ID", "Başlık", "Fiyat", "Konum", "Durum", "Yorum Sayısı", "Ortalama Puan"};
+        DefaultTableModel model = new DefaultTableModel(columns, 0);
         houseTable = new JTable(model);
         JScrollPane scrollPane = new JScrollPane(houseTable);
         panel.add(scrollPane, BorderLayout.CENTER);
@@ -53,12 +51,12 @@ public class HouseSearchScreen extends JFrame {
 
         panel.add(buttonPanel, BorderLayout.SOUTH);
 
-        // Buton İşlevleri
         detailButton.addActionListener((ActionEvent e) -> {
             int selectedRow = houseTable.getSelectedRow();
             if (selectedRow != -1) {
+                int houseId = (int) houseTable.getValueAt(selectedRow, 0);
                 dispose();
-                new HouseDetailScreen().setVisible(true); // Sonraki adımda yapacağız
+                new HouseDetailScreen(houseId).setVisible(true);
             } else {
                 JOptionPane.showMessageDialog(null, "Lütfen detayını görmek için bir ev seçin!");
             }
@@ -69,5 +67,40 @@ public class HouseSearchScreen extends JFrame {
             new RenterDashboard().setVisible(true);
         });
     }
-}
 
+    private void loadHouseData() {
+        IHouseService houseService = new HouseService();
+        houseService.getAll(UserSession.currentUser.getId()).thenAccept(result -> {
+            if (result.isSuccess()) {
+                List<HouseListDto> houses = result.getData();
+
+                SwingUtilities.invokeLater(() -> {
+                    DefaultTableModel model = (DefaultTableModel) houseTable.getModel();
+                    model.setRowCount(0); // önceki verileri temizle
+
+                    for (HouseListDto house : houses) {
+                        if ("Aktif".equalsIgnoreCase(house.getStatus())) {
+                            Object[] row = {
+                                    house.getId(),
+                                    house.getTitle(),
+                                    house.getPrice(),
+                                    house.getLocation(),
+                                    house.getStatus(),
+                                    house.getCommentCount(),
+                                    String.format("%.1f", house.getAverageRating())
+                            };
+                            model.addRow(row);
+                        }
+                    }
+                });
+            } else {
+                JOptionPane.showMessageDialog(null, "Evler yüklenemedi: " + result.getMessage());
+            }
+        }).exceptionally(ex -> {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Sunucu hatası: " + ex.getMessage());
+            return null;
+        });
+    }
+
+}

@@ -18,4 +18,14 @@ public class HouseListDto {
     private String status;
     private LocalDate availableFrom;
     private LocalDate availableTo;
+
+    private int commentCount;
+    private double averageRating;
+
+    private UserDto host;
+
+    @Override
+    public String toString() {
+        return title; // Ekranda görünen ev ismi olacak
+    }
 }

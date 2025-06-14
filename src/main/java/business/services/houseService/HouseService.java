@@ -133,4 +133,21 @@ public class HouseService implements IHouseService {
                     return gson.fromJson(responseBody, type);
                 });
     }
+
+    @Override
+    public CompletableFuture<DataResult<List<HouseListDto>>> getActiveHouses(int requesterId) {
+        String url = ApiUrls.HOUSE_GET_ACTIVE + "?requesterId=" + requesterId;
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .GET()
+                .build();
+
+        return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(HttpResponse::body)
+                .thenApply(responseBody -> {
+                    Type type = new TypeToken<DataResult<List<HouseListDto>>>() {}.getType();
+                    return gson.fromJson(responseBody, type);
+                });
+    }
 }

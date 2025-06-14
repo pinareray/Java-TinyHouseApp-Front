@@ -1,14 +1,22 @@
 package ui.admin;
 
+import business.services.houseService.HouseService;
+import business.services.houseService.IHouseService;
+import core.session.UserSession;
+import entites.dtos.HouseCreateDto;
+import entites.dtos.HouseListDto;
+
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import java.util.List;
 
 public class HouseManagementScreen extends JFrame {
     private JTable houseTable;
+    private DefaultTableModel model;
     private JButton backButton, editHouseButton, deleteHouseButton, addHouseButton;
+    private final IHouseService houseService = new HouseService();
 
     public HouseManagementScreen() {
         setTitle("İlan Yönetimi");
@@ -16,8 +24,8 @@ public class HouseManagementScreen extends JFrame {
         setLocationRelativeTo(null);
         setResizable(false);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-
         initUI();
+        loadHouses();
     }
 
     private void initUI() {
@@ -28,20 +36,10 @@ public class HouseManagementScreen extends JFrame {
         titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
         panel.add(titleLabel, BorderLayout.NORTH);
 
-        // Sahte veri
-        String[] columns = {"İlan ID", "Ev Sahibi ID", "Başlık", "Fiyat", "Konum", "Durum"};
-        Object[][] data = {
-                {1, 2, "Dağ Evi", 500.00, "Bolu", "Aktif"},
-                {2, 3, "Deniz Kıyısı Evi", 750.00, "İzmir", "Pasif"},
-                {3, 2, "Orman İçinde Bungalov", 650.00, "Sapanca", "Aktif"}
-        };
+        model = new DefaultTableModel(new String[]{"İlan ID", "Ev Sahibi ID", "Başlık", "Fiyat", "Konum", "Durum"}, 0);
+        houseTable = new JTable(model);
+        panel.add(new JScrollPane(houseTable), BorderLayout.CENTER);
 
-        DefaultTableModel tableModel = new DefaultTableModel(data, columns);
-        houseTable = new JTable(tableModel);
-        JScrollPane scrollPane = new JScrollPane(houseTable);
-        panel.add(scrollPane, BorderLayout.CENTER);
-
-        // Butonlar
         JPanel buttonPanel = new JPanel();
         editHouseButton = new JButton("✏️ Düzenle");
         deleteHouseButton = new JButton("🗑️ Sil");
@@ -52,71 +50,119 @@ public class HouseManagementScreen extends JFrame {
         buttonPanel.add(deleteHouseButton);
         buttonPanel.add(addHouseButton);
         buttonPanel.add(backButton);
-
         panel.add(buttonPanel, BorderLayout.SOUTH);
 
-        // Geri dön butonu
-        backButton.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                dispose();
-                new AdminDashboard().setVisible(true);
-            }
+        editHouseButton.addActionListener(this::editHouse);
+        deleteHouseButton.addActionListener(this::deleteHouse);
+        addHouseButton.addActionListener(this::addHouse);
+        backButton.addActionListener((ActionEvent e) -> {
+            dispose();
+            new AdminDashboard().setVisible(true);
         });
+    }
 
-        // İlan düzenleme butonu
-        editHouseButton.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                int row = houseTable.getSelectedRow();
-                if (row != -1) {
-                    String houseTitle = houseTable.getValueAt(row, 2).toString();
-                    String price = houseTable.getValueAt(row, 3).toString();
-                    String location = houseTable.getValueAt(row, 4).toString();
-
-                    // İlan bilgilerini düzenlemek için input alıyoruz
-                    String newTitle = JOptionPane.showInputDialog("Yeni İlan Başlığı", houseTitle);
-                    String newPrice = JOptionPane.showInputDialog("Yeni Fiyat", price);
-                    String newLocation = JOptionPane.showInputDialog("Yeni Konum", location);
-
-                    if (newTitle != null && newPrice != null && newLocation != null) {
-                        // Düzenlenen veriyi tabloya ekliyoruz
-                        houseTable.setValueAt(newTitle, row, 2);
-                        houseTable.setValueAt(newPrice, row, 3);
-                        houseTable.setValueAt(newLocation, row, 4);
+    private void loadHouses() {
+        model.setRowCount(0);
+        houseService.getAll(UserSession.currentUser.getId()).thenAccept(result -> {
+            if (result.isSuccess()) {
+                List<HouseListDto> houses = result.getData();
+                SwingUtilities.invokeLater(() -> {
+                    for (HouseListDto h : houses) {
+                        model.addRow(new Object[]{
+                                h.getId(),
+                                h.getHost().getId(),
+                                h.getTitle(),
+                                h.getPrice(),
+                                h.getLocation(),
+                                h.getStatus()
+                        });
                     }
-                } else {
-                    JOptionPane.showMessageDialog(null, "Düzenlemek için bir ilan seçin!");
-                }
+                });
+            } else {
+                JOptionPane.showMessageDialog(null, "İlanlar yüklenemedi: " + result.getMessage());
             }
         });
+    }
 
-        // İlan silme butonu
-        deleteHouseButton.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                int row = houseTable.getSelectedRow();
-                if (row != -1) {
-                    int confirm = JOptionPane.showConfirmDialog(null, "İlanı silmek istediğinize emin misiniz?");
-                    if (confirm == JOptionPane.YES_OPTION) {
-                        DefaultTableModel model = (DefaultTableModel) houseTable.getModel();
-                        model.removeRow(row); // İlanı silme
+    private void editHouse(ActionEvent e) {
+        int row = houseTable.getSelectedRow();
+        if (row != -1) {
+            String title = houseTable.getValueAt(row, 2).toString();
+            String price = houseTable.getValueAt(row, 3).toString();
+            String location = houseTable.getValueAt(row, 4).toString();
+
+            String newTitle = JOptionPane.showInputDialog("Yeni Başlık", title);
+            String newPrice = JOptionPane.showInputDialog("Yeni Fiyat", price);
+            String newLocation = JOptionPane.showInputDialog("Yeni Konum", location);
+
+            if (newTitle != null && newPrice != null && newLocation != null) {
+                houseTable.setValueAt(newTitle, row, 2);
+                houseTable.setValueAt(Double.parseDouble(newPrice), row, 3);
+                houseTable.setValueAt(newLocation, row, 4);
+                // ❗ İsteğe bağlı olarak burada backend'e güncelleme gönderilebilir
+            }
+        } else {
+            JOptionPane.showMessageDialog(null, "Lütfen bir ilan seçin!");
+        }
+    }
+
+    private void deleteHouse(ActionEvent e) {
+        int row = houseTable.getSelectedRow();
+        if (row != -1) {
+            int id = (int) houseTable.getValueAt(row, 0);
+            int confirm = JOptionPane.showConfirmDialog(null, "İlanı silmek istiyor musunuz?");
+            if (confirm == JOptionPane.YES_OPTION) {
+                houseService.delete(id, UserSession.currentUser.getId()).thenAccept(res -> {
+                    if (res.isSuccess()) {
+                        SwingUtilities.invokeLater(() -> model.removeRow(row));
+                        JOptionPane.showMessageDialog(null, "İlan silindi.");
+                    } else {
+                        JOptionPane.showMessageDialog(null, "Silme başarısız: " + res.getMessage());
                     }
-                }
+                });
             }
-        });
+        }
+    }
 
-        // İlan ekleme butonu
-        addHouseButton.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                // İlan eklemek için yeni bir ekran açabiliriz
-                String houseTitle = JOptionPane.showInputDialog("Yeni İlan Başlığı");
-                String price = JOptionPane.showInputDialog("Fiyat");
-                String location = JOptionPane.showInputDialog("Konum");
+    private void addHouse(ActionEvent e) {
+        String title = JOptionPane.showInputDialog("Başlık");
+        String priceStr = JOptionPane.showInputDialog("Fiyat");
+        String location = JOptionPane.showInputDialog("Konum");
 
-                if (houseTitle != null && price != null && location != null) {
-                    // Yeni veriyi tabloya ekliyoruz
-                    DefaultTableModel model = (DefaultTableModel) houseTable.getModel();
-                    model.addRow(new Object[]{model.getRowCount() + 1, 1, houseTitle, Double.parseDouble(price), location, "Aktif"});
-                }
+        if (title != null && priceStr != null && location != null) {
+            try {
+                double price = Double.parseDouble(priceStr);
+                // Yeni ev DTO'su oluştur
+                HouseCreateDto dto = new HouseCreateDto();
+                dto.setTitle(title);
+                dto.setPrice(price);
+                dto.setLocation(location);
+                dto.setStatus("Aktif");
+                dto.setRequesterId(UserSession.currentUser.getId());
+                dto.setHostId(UserSession.currentUser.getId());
+
+                houseService.add(dto).thenAccept(result -> {
+                    if (result.isSuccess()) {
+                        // Başarılıysa tabloyu güncelle
+                        SwingUtilities.invokeLater(() -> {
+                            DefaultTableModel m = (DefaultTableModel) houseTable.getModel();
+                            m.addRow(new Object[]{
+                                    result.getData().getId(),
+                                    result.getData().getHost().getId(),
+                                    result.getData().getTitle(),
+                                    result.getData().getPrice(),
+                                    result.getData().getLocation(),
+                                    result.getData().getStatus()
+                            });
+                        });
+                        JOptionPane.showMessageDialog(null, "İlan başarıyla eklendi.");
+                    } else {
+                        JOptionPane.showMessageDialog(null, "İlan eklenemedi: " + result.getMessage());
+                    }
+                });
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(null, "Fiyat sayısal olmalı!");
             }
-        });
+        }
     }
 }

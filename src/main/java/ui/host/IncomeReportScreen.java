@@ -1,5 +1,9 @@
 package ui.host;
 
+import business.services.paymentService.IPaymentService;
+import business.services.paymentService.PaymentService;
+import core.session.UserSession;
+import entites.dtos.MonthlyIncomeDto;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
@@ -8,9 +12,12 @@ import org.jfree.data.category.DefaultCategoryDataset;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.time.Month;
+import java.util.List;
 
 public class IncomeReportScreen extends JFrame {
     private JButton backButton;
+    private final IPaymentService paymentService = new PaymentService();
 
     public IncomeReportScreen() {
         setTitle("Gelir Raporu");
@@ -20,22 +27,42 @@ public class IncomeReportScreen extends JFrame {
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 
         initUI();
+        loadData();
     }
 
     private void initUI() {
-        JPanel panel = new JPanel(new BorderLayout());
-        add(panel);
+        setLayout(new BorderLayout());
 
         JLabel titleLabel = new JLabel("Gelir İstatistikleri", SwingConstants.CENTER);
         titleLabel.setFont(new Font("Arial", Font.BOLD, 22));
-        panel.add(titleLabel, BorderLayout.NORTH);
+        add(titleLabel, BorderLayout.NORTH);
 
-        // Sahte gelir verisi
+        backButton = new JButton("← Ana Panele Dön");
+        backButton.addActionListener((ActionEvent e) -> {
+            dispose();
+            new HostDashboard().setVisible(true);
+        });
+        add(backButton, BorderLayout.SOUTH);
+    }
+
+    private void loadData() {
+        paymentService.getMonthlyIncomeByHostId(UserSession.currentUser.getId())
+                .thenAccept(response -> {
+                    if (response.isSuccess()) {
+                        SwingUtilities.invokeLater(() -> drawChart(response.getData()));
+                    } else {
+                        JOptionPane.showMessageDialog(null, "Gelir verileri yüklenemedi: " + response.getMessage());
+                    }
+                });
+    }
+
+    private void drawChart(List<MonthlyIncomeDto> data) {
         DefaultCategoryDataset dataset = new DefaultCategoryDataset();
-        dataset.addValue(3000, "Gelir", "Ocak");
-        dataset.addValue(4200, "Gelir", "Şubat");
-        dataset.addValue(2500, "Gelir", "Mart");
-        dataset.addValue(3700, "Gelir", "Nisan");
+
+        for (MonthlyIncomeDto dto : data) {
+            String monthName = convertMonth(dto.getMonth());
+            dataset.addValue(dto.getTotalIncome(), "Gelir", monthName);
+        }
 
         JFreeChart barChart = ChartFactory.createBarChart(
                 "Aylık Gelir Dağılımı",
@@ -45,15 +72,30 @@ public class IncomeReportScreen extends JFrame {
         );
 
         ChartPanel chartPanel = new ChartPanel(barChart);
-        panel.add(chartPanel, BorderLayout.CENTER);
+        add(chartPanel, BorderLayout.CENTER);
+        revalidate(); // arayüzü güncelle
+    }
 
-        backButton = new JButton("← Ana Panele Dön");
-        panel.add(backButton, BorderLayout.SOUTH);
-
-        backButton.addActionListener((ActionEvent e) -> {
-            dispose();
-            new HostDashboard().setVisible(true);
-        });
+    private String convertMonth(String monthString) {
+        try {
+            int monthNumber = Integer.parseInt(monthString.split("-")[1]);
+            Month month = Month.of(monthNumber);
+            return switch (month) {
+                case JANUARY -> "Ocak";
+                case FEBRUARY -> "Şubat";
+                case MARCH -> "Mart";
+                case APRIL -> "Nisan";
+                case MAY -> "Mayıs";
+                case JUNE -> "Haziran";
+                case JULY -> "Temmuz";
+                case AUGUST -> "Ağustos";
+                case SEPTEMBER -> "Eylül";
+                case OCTOBER -> "Ekim";
+                case NOVEMBER -> "Kasım";
+                case DECEMBER -> "Aralık";
+            };
+        } catch (Exception e) {
+            return monthString; // hatalıysa orijinali göster
+        }
     }
 }
-

@@ -1,13 +1,22 @@
 package ui.admin;
 
+import business.services.paymentService.IPaymentService;
+import business.services.paymentService.PaymentService;
+import core.session.UserSession;
+import entites.dtos.PaymentListDto;
+
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 public class PaymentManagementScreen extends JFrame {
     private JTable paymentTable;
+    private DefaultTableModel model;
     private JButton backButton;
+    private final IPaymentService paymentService = new PaymentService();
 
     public PaymentManagementScreen() {
         setTitle("Ödeme Yönetimi");
@@ -17,6 +26,7 @@ public class PaymentManagementScreen extends JFrame {
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 
         initUI();
+        loadPayments();
     }
 
     private void initUI() {
@@ -27,16 +37,8 @@ public class PaymentManagementScreen extends JFrame {
         titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
         panel.add(titleLabel, BorderLayout.NORTH);
 
-        // Sahte veri
-        String[] columns = {"Ödeme ID", "Rezervasyon ID", "Tutar", "Ödeme Tarihi", "Yöntem"};
-        Object[][] data = {
-                {201, 101, 1500.00, "2025-04-01", "Kredi Kartı"},
-                {202, 102, 2500.00, "2025-05-05", "Havale"},
-                {203, 103, 1800.00, "2025-06-15", "Kredi Kartı"}
-        };
-
-        DefaultTableModel tableModel = new DefaultTableModel(data, columns);
-        paymentTable = new JTable(tableModel);
+        model = new DefaultTableModel(new String[]{"Ödeme ID", "Rezervasyon ID", "Tutar", "Tarih", "Kiracı"}, 0);
+        paymentTable = new JTable(model);
         JScrollPane scrollPane = new JScrollPane(paymentTable);
         panel.add(scrollPane, BorderLayout.CENTER);
 
@@ -46,6 +48,29 @@ public class PaymentManagementScreen extends JFrame {
         backButton.addActionListener((ActionEvent e) -> {
             dispose();
             new AdminDashboard().setVisible(true);
+        });
+    }
+
+    private void loadPayments() {
+        model.setRowCount(0); // önce tabloyu temizle
+
+        paymentService.getAll(UserSession.currentUser.getId()).thenAccept(result -> {
+            if (result.isSuccess()) {
+                List<PaymentListDto> payments = result.getData();
+                SwingUtilities.invokeLater(() -> {
+                    for (PaymentListDto p : payments) {
+                        model.addRow(new Object[]{
+                                p.getId(),
+                                p.getReservation().getId(),
+                                p.getAmount() + " TL",
+                                p.getPaymentDate().format(DateTimeFormatter.ISO_DATE),
+                                p.getUser().getFirstName() + " " + p.getUser().getLastName()
+                        });
+                    }
+                });
+            } else {
+                JOptionPane.showMessageDialog(null, "Ödemeler yüklenemedi: " + result.getMessage());
+            }
         });
     }
 }

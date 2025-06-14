@@ -1,14 +1,28 @@
 package ui.renter;
 
+import business.services.commentService.ICommentService;
+import business.services.commentService.CommentService;
+import business.services.reservationService.IReservationService;
+import business.services.reservationService.ReservationService;
+import business.services.houseService.IHouseService;
+import business.services.houseService.HouseService;
+import core.session.UserSession;
+import entites.dtos.*;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.util.List;
 
 public class AddReviewScreen extends JFrame {
-    private JComboBox<String> houseCombo;
+    private JComboBox<HouseListDto> houseCombo;
     private JTextArea commentArea;
     private JComboBox<Integer> ratingCombo;
     private JButton submitButton, backButton;
+
+    private final IReservationService reservationService = new ReservationService();
+    private final IHouseService houseService = new HouseService();
+    private final ICommentService commentService = new CommentService();
 
     public AddReviewScreen() {
         setTitle("Yorum Yap / Puan Ver");
@@ -18,6 +32,7 @@ public class AddReviewScreen extends JFrame {
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 
         initUI();
+        loadRentedHouses();
     }
 
     private void initUI() {
@@ -30,9 +45,7 @@ public class AddReviewScreen extends JFrame {
         titleLabel.setBounds(50, 30, 200, 30);
         panel.add(titleLabel);
 
-        // Sahte kiralanan evler (ileride veritabanından gelir)
-        String[] rentedHouses = {"Orman Evi", "Dağ Evi", "Bungalov Ev"};
-        houseCombo = new JComboBox<>(rentedHouses);
+        houseCombo = new JComboBox<>();
         houseCombo.setBounds(50, 70, 480, 30);
         panel.add(houseCombo);
 
@@ -61,27 +74,53 @@ public class AddReviewScreen extends JFrame {
         backButton.setBounds(20, 420, 100, 30);
         panel.add(backButton);
 
-        // Buton İşlevleri
-        submitButton.addActionListener((ActionEvent e) -> {
-            String selectedHouse = (String) houseCombo.getSelectedItem();
-            String comment = commentArea.getText();
-            int rating = (int) ratingCombo.getSelectedItem();
-
-            if (comment.isEmpty()) {
-                JOptionPane.showMessageDialog(null, "Lütfen yorum alanını doldurun!");
-                return;
-            }
-
-            JOptionPane.showMessageDialog(null, "Yorumunuz gönderildi!\nEv: " + selectedHouse +
-                    "\nPuan: " + rating + "\nTeşekkürler!");
-            dispose();
-            new RenterDashboard().setVisible(true);
-        });
-
-        backButton.addActionListener((ActionEvent e) -> {
+        submitButton.addActionListener(this::submitComment);
+        backButton.addActionListener(e -> {
             dispose();
             new RenterDashboard().setVisible(true);
         });
     }
-}
 
+    private void loadRentedHouses() {
+        reservationService.getByUserId(UserSession.currentUser.getId(), UserSession.currentUser.getId())
+                .thenAccept(res -> {
+                    if (res.isSuccess()) {
+                        List<ReservationListDto> reservations = res.getData();
+                        for (ReservationListDto r : reservations) {
+                            HouseListDto house = r.getHouse();
+                            SwingUtilities.invokeLater(() -> houseCombo.addItem(house));
+                        }
+                    } else {
+                        JOptionPane.showMessageDialog(null, "Ev bilgileri yüklenemedi: " + res.getMessage());
+                    }
+                });
+
+    }
+
+    private void submitComment(ActionEvent e) {
+        HouseListDto selectedHouse = (HouseListDto) houseCombo.getSelectedItem();
+        String comment = commentArea.getText();
+        int rating = (int) ratingCombo.getSelectedItem();
+
+        if (selectedHouse == null || comment.isEmpty()) {
+            JOptionPane.showMessageDialog(null, "Lütfen tüm alanları doldurun!");
+            return;
+        }
+
+        CommentCreateDto dto = new CommentCreateDto();
+        dto.setHouseId(selectedHouse.getId());
+        dto.setContent(comment);
+        dto.setRating(rating);
+        dto.setUserId(UserSession.currentUser.getId());
+
+        commentService.add(dto).thenAccept(result -> {
+            if (result.isSuccess()) {
+                JOptionPane.showMessageDialog(null, "Yorum başarıyla gönderildi!");
+                dispose();
+                new RenterDashboard().setVisible(true);
+            } else {
+                JOptionPane.showMessageDialog(null, "Yorum gönderilemedi: " + result.getMessage());
+            }
+        });
+    }
+}

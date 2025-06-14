@@ -17,4 +17,5 @@ public interface IHouseService {
     CompletableFuture<DataResult<HouseDto>> update(HouseUpdateDto dto);
     CompletableFuture<Result> delete(int id, int requesterId);
     CompletableFuture<DataResult<List<HouseListDto>>> getByHostId(int hostId, int requesterId);
+    CompletableFuture<DataResult<List<HouseListDto>>> getActiveHouses(int requesterId);
 }
