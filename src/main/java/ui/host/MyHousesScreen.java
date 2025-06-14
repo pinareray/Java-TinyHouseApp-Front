@@ -167,16 +167,22 @@ public class MyHousesScreen extends JFrame {
                 .thenAccept(result -> {
                     if (result.isSuccess()) {
                         SwingUtilities.invokeLater(() -> {
-                            String[] columns = {"ID", "Başlık", "Fiyat", "Konum", "Durum"};
+                            // Tüm alanları içeren sütun başlıkları
+                            String[] columns = {
+                                    "ID", "Başlık", "Açıklama", "Fiyat", "Konum", "Durum", "Başlangıç", "Bitiş"
+                            };
                             DefaultTableModel model = new DefaultTableModel(columns, 0);
 
                             for (HouseListDto house : result.getData()) {
                                 Object[] row = {
                                         house.getId(),
                                         house.getTitle(),
+                                        house.getDescription(),
                                         house.getPrice(),
                                         house.getLocation(),
-                                        house.getStatus()
+                                        house.getStatus(),
+                                        house.getAvailableFrom() != null ? house.getAvailableFrom().toString() : "-",
+                                        house.getAvailableTo() != null ? house.getAvailableTo().toString() : "-"
                                 };
                                 model.addRow(row);
                             }
