@@ -8,7 +8,6 @@ import entites.dtos.UserDto;
 import entites.dtos.UserLoginDto;
 import entites.dtos.UserRegisterDto;
 
-import javax.swing.*;
 import java.lang.reflect.Type;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -73,8 +72,14 @@ public class UserService implements IUserService {
                     .thenApply(HttpResponse::body)
                     .thenApply(responseBody -> {
                         Type type = new TypeToken<DataResult<UserDto>>() {}.getType();
-                        Object parsed = gson.fromJson(responseBody, type);
-                        return (DataResult<UserDto>) parsed;
+                        DataResult<UserDto> result = gson.fromJson(responseBody, type);
+
+                        // ✅ Başarılı girişte oturumu başlat
+                        if (result.isSuccess()) {
+                            core.session.UserSession.currentUser = result.getData();
+                        }
+
+                        return result;
                     })
                     .thenAccept(future::complete)
                     .exceptionally(ex -> {

@@ -1,6 +1,14 @@
 package ui.host;
 
+import business.services.houseService.HouseService;
+import business.services.houseService.IHouseService;
+import core.session.UserSession;
+import entites.dtos.HouseCreateDto;
 import javax.swing.*;
+import javax.swing.text.AbstractDocument;
+import javax.swing.text.AttributeSet;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.DocumentFilter;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 
@@ -50,6 +58,7 @@ public class AddHouseScreen extends JFrame {
 
         priceField = new JTextField();
         priceField.setBounds(150, 220, 250, 25);
+        setNumericOnlyFilter(priceField); // <== Buraya ekle
         panel.add(priceField);
 
         JLabel locationLabel = new JLabel("Konum:");
@@ -81,23 +90,73 @@ public class AddHouseScreen extends JFrame {
         saveButton.addActionListener((ActionEvent e) -> {
             String title = titleField.getText();
             String description = descriptionArea.getText();
-            String price = priceField.getText();
+            String priceText = priceField.getText();
             String location = locationField.getText();
             String status = statusCombo.getSelectedItem().toString();
 
-            if (title.isEmpty() || price.isEmpty() || location.isEmpty()) {
+            if (title.isEmpty() || priceText.isEmpty() || location.isEmpty()) {
                 JOptionPane.showMessageDialog(null, "Başlık, fiyat ve konum boş olamaz!");
-            } else {
-                JOptionPane.showMessageDialog(null, "İlan başarıyla oluşturuldu!\nBaşlık: " + title);
-                // Burada veritabanına ekleme yapılacak (ileride)
-                dispose();
-                new MyHousesScreen().setVisible(true); // Geri dön
+                return;
             }
+
+            double price;
+            try {
+                price = Double.parseDouble(priceText);
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(null, "Fiyat sayısal bir değer olmalıdır!");
+                return;
+            }
+
+            HouseCreateDto dto = new HouseCreateDto();
+            dto.setTitle(title);
+            dto.setDescription(description);
+            dto.setPrice(price);
+            dto.setLocation(location);
+            dto.setStatus(status);
+            dto.setHostId(UserSession.currentUser.getId());        // Oturumdaki ev sahibi
+            dto.setRequesterId(UserSession.currentUser.getId());   // İşlemi yapan
+
+            IHouseService houseService = new HouseService();
+            houseService.add(dto).thenAccept(result -> {
+                if (result.isSuccess()) {
+                    JOptionPane.showMessageDialog(null, result.getMessage());
+                    SwingUtilities.invokeLater(() -> {
+                        dispose();
+                        new MyHousesScreen().setVisible(true);
+                    });
+                } else {
+                    JOptionPane.showMessageDialog(null, "Hata: " + result.getMessage());
+                }
+            }).exceptionally(ex -> {
+                ex.printStackTrace();
+                JOptionPane.showMessageDialog(null, "Sunucu hatası: " + ex.getMessage());
+                return null;
+            });
         });
 
         cancelButton.addActionListener((ActionEvent e) -> {
             dispose();
             new MyHousesScreen().setVisible(true);
+        });
+    }
+
+    private void setNumericOnlyFilter(JTextField textField) {
+        ((AbstractDocument) textField.getDocument()).setDocumentFilter(new DocumentFilter() {
+            @Override
+            public void insertString(DocumentFilter.FilterBypass fb, int offset, String string, AttributeSet attr)
+                    throws BadLocationException {
+                if (string.matches("[0-9.]*")) {
+                    super.insertString(fb, offset, string, attr);
+                }
+            }
+
+            @Override
+            public void replace(FilterBypass fb, int offset, int length, String text, AttributeSet attrs)
+                    throws BadLocationException {
+                if (text.matches("[0-9.]*")) {
+                    super.replace(fb, offset, length, text, attrs);
+                }
+            }
         });
     }
 }

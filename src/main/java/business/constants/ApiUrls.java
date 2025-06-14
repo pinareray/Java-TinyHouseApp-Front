@@ -9,4 +9,12 @@ public class ApiUrls {
     public static final String USER_DELETE_BY_ID = BASE_URL + "/users/deletebyid";
     public static final String USER_UPDATE = BASE_URL + "/users/update";
     public static final String USER_ADD = BASE_URL + "/users/add";
+
+    public static final String HOUSE_GET_ALL = BASE_URL + "/houses/getall";
+    public static final String HOUSE_GET_BY_ID = BASE_URL + "/houses/getbyid";
+    public static final String HOUSE_ADD = BASE_URL + "/houses/add";
+    public static final String HOUSE_UPDATE = BASE_URL + "/houses/update";
+    public static final String HOUSE_DELETE = BASE_URL + "/houses/deletebyid";
+    public static final String HOUSE_GET_BY_HOST_ID = BASE_URL + "/houses/getbyhostid";
+
 }
