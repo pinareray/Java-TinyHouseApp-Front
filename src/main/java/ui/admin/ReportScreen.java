@@ -58,7 +58,7 @@ public class ReportScreen extends JFrame {
                 });
             } else {
                 SwingUtilities.invokeLater(() -> {
-                    JOptionPane.showMessageDialog(this, "İstatistikler yüklenemedi: " + result.getMessage());
+                    JOptionPane.showMessageDialog(this, "İstatistikler yüklenemedi:  " + result.getMessage());
                 });
             }
         }).exceptionally(ex -> {

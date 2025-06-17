@@ -79,7 +79,7 @@ public class HouseManagementScreen extends JFrame {
                     }
                 });
             } else {
-                JOptionPane.showMessageDialog(null, "İlanlar yüklenemedi: " + result.getMessage());
+                JOptionPane.showMessageDialog(null, "İlanlar yüklenemedi:" + result.getMessage());
             }
         });
     }
@@ -161,7 +161,7 @@ public class HouseManagementScreen extends JFrame {
                     }
                 });
             } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(null, "Fiyat sayısal olmalı!");
+                JOptionPane.showMessageDialog(null, "Fiyat sayısal olmalı");
             }
         }
     }

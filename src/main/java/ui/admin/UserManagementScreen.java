@@ -43,9 +43,9 @@ public class UserManagementScreen extends JFrame {
 
         JPanel buttonPanel = new JPanel();
 
-        editButton = new JButton("✏️ Düzenle");
-        deleteButton = new JButton("🗑️ Sil");
-        toggleStatusButton = new JButton("🔁 Aktif/Pasif");
+        editButton = new JButton("✏ Düzenle");
+        deleteButton = new JButton(" Sil");
+        toggleStatusButton = new JButton(" Aktif/Pasif");
         backButton = new JButton("← Geri");
 
         buttonPanel.add(editButton);

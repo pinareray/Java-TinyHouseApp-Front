@@ -179,7 +179,7 @@ public class ReservationManagementScreen extends JFrame {
                     model.setValueAt(newStatus.name(), row, 5);
                     JOptionPane.showMessageDialog(this, "Rezervasyon güncellendi!");
                 } else {
-                    JOptionPane.showMessageDialog(this, "Güncelleme başarısız: " + res.getMessage());
+                    JOptionPane.showMessageDialog(this, "Güncelleme başarısız oldu: " + res.getMessage());
                 }
             });
         }).exceptionally(ex -> {
